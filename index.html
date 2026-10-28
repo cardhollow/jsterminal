@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>js-term</title>
+
+<link href="style.css" rel="stylesheet"/>
+</head>
+<body>
+<div class="view" id="editorView">
+<div class="bar"><button aria-controls="fileMenu" aria-expanded="false" aria-haspopup="menu" id="fileMenuBtn">File ▾</button>
+<span class="g">user@js:~$</span> <span>edit <span id="activeFileLabel">program.js</span></span>
+<button id="run">Run</button><span class="dim">(Ctrl+Enter)</span>
+<button aria-controls="controlsPanel" aria-expanded="false" aria-haspopup="true" id="controlsBtn">Controls</button>
+<span style="margin-left:auto"></span><button id="foldall">Fold all</button><button id="unfoldall">Unfold all</button></div>
+<div hidden="" id="searchbar">
+<div class="searchrow"><label for="findq">Find</label><input autocomplete="off" id="findq" placeholder="Search code" spellcheck="false" type="text"/>
+<label title="Match letter case"><input id="findCase" type="checkbox"/> Aa</label><label title="Use JavaScript regular expressions"><input id="findRegex" type="checkbox"/> .* </label><button id="findPrev" title="Previous match">↑</button><button id="findNext" title="Next match">↓</button></div>
+<div class="searchrow" hidden="" id="replaceRow"><label for="replaceq">Replace</label><input autocomplete="off" id="replaceq" placeholder="Replace with" spellcheck="false" type="text"/><button id="replaceOne">Replace</button><button id="replaceAll">Replace all</button></div>
+<button id="closeSearch" title="Close search">×</button><span class="dim" id="findStatus"></span>
+</div>
+<div hidden="" id="gotoBar">
+<label for="gotoLine">Go to line</label>
+<input aria-label="Line number" autocomplete="off" id="gotoLine" inputmode="numeric" spellcheck="false" type="text"/>
+<button id="gotoGo" type="button">Go</button>
+<button id="gotoClose" type="button">Cancel</button>
+<span class="dim" id="gotoStatus"></span>
+</div>
+<div id="ed"><div id="lines"><div id="rows"></div><div id="curline"></div><div id="selbox"></div><div id="pairbox"></div><div id="multi"></div><div id="cur"></div><textarea autocapitalize="off" autocomplete="off" autocorrect="off" id="ta" spellcheck="false"></textarea><div id="pop"></div><div id="sig"></div></div></div>
+<div class="dim" id="help"><span id="pos"></span>  |  Ctrl+F find · Ctrl+R replace · Ctrl+G go to line · Alt+Click add cursor · Alt+Shift select</div>
+</div>
+<div aria-label="File menu" class="popup" hidden="" id="fileMenu" role="menu">
+<div class="popup-head"><strong>File</strong><button aria-label="Close file menu" id="fileClose" type="button">Close</button></div>
+<div class="popup-note" id="fileCurrentLabel">program.js</div>
+<label class="popup-line" for="fileNameInput">Name <input id="fileNameInput" maxlength="180" spellcheck="false" type="text" value="program.js"/></label>
+<button class="popup-action" id="fileRename" role="menuitem" type="button">Rename current file</button>
+<hr class="popup-sep"/>
+<button class="popup-action" id="fileNew" role="menuitem" type="button">New file…</button>
+<button class="popup-action" id="fileImportBtn" role="menuitem" type="button">Import file…</button>
+<button class="popup-action" id="fileExport" role="menuitem" type="button">Export / download</button>
+<button class="popup-action" id="fileSave" role="menuitem" type="button">Save in browser</button>
+<button class="popup-action" id="fileCopy" role="menuitem" type="button">Copy source</button>
+<hr class="popup-sep"/>
+<button class="popup-action" id="fileStarter" role="menuitem" type="button">Restore starter sample…</button>
+<div aria-live="polite" class="popup-note" id="fileState">Ready</div>
+<input accept=".js,.mjs,.cjs,.jsx,.ts,.txt,.html,.htm,.json,.css,.md,.sgml" hidden="" id="fileImportInput" type="file"/>
+</div>
+<div aria-label="All controls" class="popup" hidden="" id="controlsPanel" role="region">
+<div class="popup-head"><strong>Controls and shortcuts</strong><button id="controlsClose" type="button">Close</button></div>
+<div class="popup-section">
+<h3>Main buttons</h3>
+<ul>
+<li><b>File</b> — new, import, export/download, save in browser, copy source, rename.</li>
+<li><b>Run</b> or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> — run current code.</li>
+<li><b>Stop</b> — stop a running program; <b>Back</b> returns from the terminal to the editor.</li>
+<li><b>Fold all</b> / <b>Unfold all</b> — collapse or expand code blocks.</li>
+</ul>
+</div>
+<hr class="popup-sep"/>
+<div class="popup-section">
+<h3>Mouse and caret</h3>
+<ul>
+<li>Click code to place the caret.</li>
+<li>Drag to select text; <kbd>Shift</kbd>+click extends the selection.</li>
+<li>Double-click selects a word; triple-click selects a line.</li>
+<li>Click a line number to select the line. Click the gutter triangle to fold/unfold a block.</li>
+<li><kbd>Alt</kbd>+click adds/removes an extra caret. Existing extra carets remain while Alt is held.</li>
+<li><kbd>Alt</kbd>+<kbd>Shift</kbd>+drag adds or extends a secondary selection. Hold <kbd>Alt</kbd> while using arrows to keep extra carets active; add <kbd>Ctrl</kbd> to move by words while selecting.</li>
+</ul>
+</div>
+<hr class="popup-sep"/>
+<div class="popup-section">
+<h3>Editor keyboard shortcuts</h3>
+<ul>
+<li><kbd>Ctrl</kbd>+<kbd>F</kbd> — find; selected code is inserted into the search field.</li>
+<li><kbd>Ctrl</kbd>+<kbd>R</kbd> — find and replace; selected code is inserted as the search.</li>
+<li><kbd>Ctrl</kbd>+<kbd>G</kbd> — go to line; starts with the current caret line selected.</li>
+<li><kbd>Enter</kbd> — newline with automatic indentation.</li>
+<li><kbd>Tab</kbd> — indent; <kbd>Shift</kbd>+<kbd>Tab</kbd> — unindent.</li>
+<li><kbd>Ctrl</kbd>+<kbd>/</kbd> — toggle line comments.</li>
+<li><kbd>Ctrl</kbd>+<kbd>Space</kbd> — autocomplete suggestions.</li>
+<li><kbd>Ctrl</kbd>+<kbd>Z</kbd> — undo; <kbd>Ctrl</kbd>+<kbd>Y</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> — redo.</li>
+<li><kbd>Ctrl</kbd>+<kbd>A</kbd> — select all; <kbd>Ctrl</kbd>+<kbd>C</kbd>/<kbd>X</kbd>/<kbd>V</kbd> — copy/cut/paste.</li>
+<li>Arrow keys move the caret; <kbd>Shift</kbd>+arrows select; <kbd>Ctrl</kbd>+left/right moves by word.</li>
+<li><kbd>Home</kbd>/<kbd>End</kbd> — line start/end; <kbd>Ctrl</kbd>+<kbd>Home</kbd>/<kbd>End</kbd> — document start/end.</li>
+<li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>[</kbd> — fold current block; <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>]</kbd> — unfold.</li>
+<li><kbd>Escape</kbd> — close suggestions or the find bar.</li>
+</ul>
+</div>
+<hr class="popup-sep"/>
+<div class="popup-section">
+<h3>Find and replace</h3>
+<ul>
+<li><b>Aa</b> toggles case-sensitive matching.</li>
+<li><b>.*</b> treats the search as a JavaScript regular expression. Invalid expressions turn the search field red.</li>
+<li>All matches are highlighted; the current match is red. Use ↑/↓ or <kbd>Enter</kbd>/<kbd>Shift</kbd>+<kbd>Enter</kbd> to navigate.</li>
+<li><b>Replace</b> replaces the current match; <b>Replace all</b> replaces every match.</li>
+</ul>
+</div>
+<hr class="popup-sep"/>
+<div class="popup-section">
+<h3>Code features</h3>
+<ul>
+<li>Syntax coloring, matching bracket highlights, code folding, autocomplete, and parameter hints.</li>
+<li>Unused declarations and unreachable sections are marked in the editor.</li>
+<li>Extra carets allow typing, paste, Backspace, and Delete at multiple positions.</li>
+</ul>
+</div>
+<hr class="popup-sep"/>
+<div class="popup-section">
+<h3>Terminal JavaScript API</h3>
+<ul>
+<li><code>print(value)</code>, <code>println(value)</code>, <code>write(value)</code> — output text.</li>
+<li><code>input(prompt)</code> — read terminal input.</li>
+<li><code>clear()</code> — clear terminal output.</li>
+<li><code>sleep(ms)</code> — asynchronously wait for milliseconds; top-level <code>await</code> is supported.</li>
+<li><code>onKey(callback)</code> — listen for key events; returns an unsubscribe function.</li>
+<li><code>exit()</code> — stop the program; <code>console.log/warn/error</code> also write to the terminal.</li>
+<li>Extended <code>Math</code> helpers include <code>clamp</code>, <code>lerp</code>, <code>randInt</code>, <code>mean</code>, <code>gcd</code> and more.</li>
+</ul>
+</div>
+</div>
+
+<div class="view" hidden="" id="termView">
+<div class="bar">
+<button id="stop">Stop</button><button id="restart">Restart</button>
+<button id="clr">Clear</button><button hidden="" id="canvasBtn">Canvas</button><button id="back">Editor</button>
+<span class="dim" id="status"></span>
+</div>
+<div id="term"><pre id="screen"></pre></div>
+<input autocapitalize="off" autocomplete="off" disabled="" id="inp" spellcheck="false" type="text"/>
+</div>
+<div class="view" hidden="" id="canvasView">
+<div class="bar"><button id="canvasTerminalBtn">Terminal</button><button id="canvasStop">Stop</button><button id="canvasRestart">Restart</button><button id="canvasEditorBtn">Editor</button><span class="canvas-note">HTML5 Canvas · 2D context</span><span class="dim" id="canvasStatus" style="margin-left:auto">canvas not initialized</span></div>
+<div id="canvasStage"><canvas aria-label="Program canvas" height="600" id="canvasSurface" tabindex="0" width="800"></canvas></div>
+</div>
+
+<script src="js/worker-runtime.js"></script><script src="js/terminal.js"></script><script src="js/editor.js"></script><script src="js/starter-sample.js"></script><script src="js/app.js"></script></body>
+</html>
