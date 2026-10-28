@@ -44,8 +44,18 @@ function workerMain() {
   self.clearTimeout = self.clearInterval = id => { live.delete(id); _ct(id); _ci(id); check(); };
   const sleep = ms => new Promise(r => self.setTimeout(r, ms));
 
-  
-  
+  const __canvasOpsQueue = [];
+  let __canvasOpsFlushTimer = null;
+  const queueCanvasOp = op => {
+    __canvasOpsQueue.push(op);
+    if (__canvasOpsFlushTimer !== null) return;
+    __canvasOpsFlushTimer = _st(() => {
+      __canvasOpsFlushTimer = null;
+      const ops = __canvasOpsQueue.splice(0);
+      if (ops.length) rawPost({ t: "canvas-ops", ops });
+    }, 0);
+  };
+
   const __canvasBridgePending = new Map();
   const __canvasEventHandlers = new Map();
   let __canvasBridgeId = 1, __canvasLibraryPromise = null;
@@ -69,30 +79,30 @@ function workerMain() {
       };
       let dash = [], handle;
       const methods = new Set(["clearRect","fillRect","strokeRect","beginPath","closePath","moveTo","lineTo","rect","roundRect","arc","arcTo","ellipse","quadraticCurveTo","bezierCurveTo","stroke","fill","clip","save","restore","translate","rotate","scale","transform","setTransform","resetTransform","fillText","strokeText","setLineDash"]);
-      const syncContextState = () => { for (const [key, value] of Object.entries(state)) rawPost({ t: "canvas-op", op: { kind: "set", key, value } }); rawPost({ t: "canvas-op", op: { kind: "call", method: "setLineDash", args: [dash] } }); };
+      const syncContextState = () => { for (const [key, value] of Object.entries(state)) queueCanvasOp({ kind: "set", key, value }); queueCanvasOp({ kind: "call", method: "setLineDash", args: [dash] }); };
       const context = new Proxy({}, {
         get(_target, key) {
           if (key === "canvas") return handle;
-          if (key === "setLineDash") return values => { dash = Array.from(values || []); rawPost({ t: "canvas-op", op: { kind: "call", method: "setLineDash", args: [dash] } }); };
+          if (key === "setLineDash") return values => { dash = Array.from(values || []); queueCanvasOp({ kind: "call", method: "setLineDash", args: [dash] }); };
           if (key === "getLineDash") return () => dash.slice();
           if (key === "measureText") return text => { const px = parseFloat(state.font) || 10; return { width: String(text).length * px * 0.58, actualBoundingBoxAscent: px * 0.8, actualBoundingBoxDescent: px * 0.2 }; };
           if (Object.prototype.hasOwnProperty.call(state, key)) return state[key];
-          if (methods.has(key)) return (...args) => { rawPost({ t: "canvas-op", op: { kind: "call", method: key, args } }); };
+          if (methods.has(key)) return (...args) => { queueCanvasOp({ kind: "call", method: key, args }); };
           return undefined;
         },
         set(_target, key, value) {
           if (typeof key !== "string") return true;
           state[key] = value;
-          rawPost({ t: "canvas-op", op: { kind: "set", key, value } });
+          queueCanvasOp({ kind: "set", key, value });
           return true;
         }
       });
       const rafIds = new Set();
       handle = {
         get width() { return width; },
-        set width(v) { width = Math.max(1, Math.min(8192, Math.floor(Number(v) || 1))); rawPost({ t: "canvas-op", op: { kind: "resize", width, height } }); syncContextState(); },
+        set width(v) { width = Math.max(1, Math.min(8192, Math.floor(Number(v) || 1))); queueCanvasOp({ kind: "resize", width, height }); syncContextState(); },
         get height() { return height; },
-        set height(v) { height = Math.max(1, Math.min(8192, Math.floor(Number(v) || 1))); rawPost({ t: "canvas-op", op: { kind: "resize", width, height } }); syncContextState(); },
+        set height(v) { height = Math.max(1, Math.min(8192, Math.floor(Number(v) || 1))); queueCanvasOp({ kind: "resize", width, height }); syncContextState(); },
         getContext(type = "2d") { if (type !== "2d") throw new Error('canvas supports getContext("2d") only.'); return context; },
         clear() { context.clearRect(0, 0, width, height); },
         createCanvas(w = width, h = height) { this.width = w; this.height = h; return this; },

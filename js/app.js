@@ -84,6 +84,7 @@ function onMsg(m) {
     case "keys": keysOn = m.n; setStatus(m.n ? "running (listening for keys)" : "running", "g"); break;
     case "canvas-request": handleCanvasRequest(m); break;
     case "canvas-op": applyCanvasOp(m.op); break;
+    case "canvas-ops": for (const op of m.ops || []) applyCanvasOp(op); break;
     case "done": finish("done"); break;
     case "error": showError(m); finish("error"); break;
   }
